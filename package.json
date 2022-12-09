@@ -1,0 +1,78 @@
+{
+  "name": "@cyca/utils",
+  "version": "0.0.0-alpha.3",
+  "description": "Personal JS utils I use in the daily",
+  "type": "module",
+  "sideEffects": false,
+  "main": "index.js",
+  "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./index.js",
+      "require": "./index.cjs",
+      "types": "./index.d.ts"
+    },
+    "./*": {
+      "import": "./*.js",
+      "require": "./*.cjs",
+      "types": "./*.d.ts"
+    }
+  },
+  "files": [
+    "**"
+  ],
+  "scripts": {
+    "type-check": "tsc",
+    "build:dev": "tsup --watch",
+    "build:prod": "shx rm -rf dist && env NODE_ENV=production tsup",
+    "build:watch": "tsup --watch",
+    "postbuild": "shx cp package.json readme.md LICENSE dist && json -I -f dist/package.json -e \"this.devDependencies=undefined; this.optionalDependencies=undefined; this.scripts=undefined;\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cvpcasada/js-utils.git"
+  },
+  "keywords": [
+    "react",
+    "ramda",
+    "jotai"
+  ],
+  "author": "Cyrus Venn Casada <cvpcasada@outlook.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^18.11.11",
+    "@types/react": "^18.0.26",
+    "dequal": "^2.0.3",
+    "jotai": "^1.11.1",
+    "json": "^11.0.0",
+    "npm-packlist": "^7.0.2",
+    "react": "^18.2.0",
+    "remeda": "^1.3.0",
+    "shx": "^0.3.4",
+    "ts-toolbelt": "^9.6.0",
+    "tsup": "^6.5.0",
+    "typescript": "^4.9.3"
+  },
+  "peerDependencies": {
+    "jotai": "1.x",
+    "react": "16.8 - 18",
+    "remeda": "^1.3.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "remeda": {
+      "optional": true
+    },
+    "jotai": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
