@@ -147,16 +147,16 @@ export function useUpdateEffect(
 /**
  * Converts a react hook function into a render prop component
  */
-export function withHook<A extends any[], R>(hook: Fn<A, R>) {
+ export function withHook<A extends any[], R>(useHook: Fn<A, R>) {
   return function HookComponent({
     children,
     args,
   }: {
-    children: (props: ReturnType<typeof hook>) => React.ReactElement;
+    children: (props: ReturnType<typeof useHook>) => React.ReactElement;
     args?: A;
-  }): React.ReactNode {
-    const res = hook(...((args as A) ?? []));
-    return children(res) as React.ReactElement;
+  }) {
+    const res = useHook(...((args ?? []) as A));
+    return children(res);
   };
 }
 
