@@ -189,7 +189,7 @@ export function useDeepMemoEffect(
 ) {
   useEffect(
     callback,
-    useDeepMemo(() => deps, equals)
+    useDeepMemo(() => deps, deps)
   );
 }
 
