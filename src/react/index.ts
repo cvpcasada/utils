@@ -4,11 +4,20 @@ import {
   useEffect,
   useRef,
   useState,
+  startTransition,
+  useSyncExternalStore,
+  createElement,
+  Suspense,
+  createContext,
 } from "react";
 
 import { dequal as equals } from "dequal/lite";
+import { Emitter, EventsMap, createNanoEvents } from "nanoevents";
+
+export { default as useMediaQuery } from "./useMediaQuery";
 
 type Fn<A extends any[], R> = (...args: A) => R;
+type AnyFn<R> = Fn<any[], R>;
 type EventRef<T> = { callback: T; stable: T };
 
 /**
@@ -33,9 +42,10 @@ export const useIsomorphicLayoutEffect =
 
 /**
  * A Hook to define an event handler with an always-stable function identity. Aimed to be easier to use than useCallback.
- * see proposal https://github.com/reactjs/rfcs/blob/useevent/text/0000-useevent.md
+ * useEffectEvent (experimental) instead if event is only used as part of useEffect logic.
+ * See https://react.dev/learn/separating-events-from-effects#declaring-an-effect-event
  */
-export const useEvent = <A extends any[], R>(callback: Fn<A, R>): Fn<A, R> => {
+export function useEvent<A extends any[], R>(callback: Fn<A, R>): Fn<A, R> {
   let ref = useRef<EventRef<Fn<A, R>>>({
     stable: (...args) => ref.current.callback(...args),
     callback,
@@ -46,7 +56,7 @@ export const useEvent = <A extends any[], R>(callback: Fn<A, R>): Fn<A, R> => {
   });
 
   return ref.current.stable;
-};
+}
 
 /**
  * Returns a handler with pending states, useful for async events
@@ -62,19 +72,22 @@ export const useEvent = <A extends any[], R>(callback: Fn<A, R>): Fn<A, R> => {
  * a callback function as an argument and returns a memoized version of the callback.
  * The memoized version of the callback will be used to track the pending and error state.
  */
-export const usePendingEvent = () => {
+export function usePendingEvent() {
+  let [success, setSuccess] = useState(false);
   let [pending, setPending] = useState(false);
   let [error, setError] = useState<Error | null>(null);
 
   let ref = useRef<Fn<any, unknown>>(() => null);
 
-  let memoized = useCallback(async (...args) => {
+  let memoized = useCallback(async (...args: unknown[]) => {
     let result: unknown;
 
     setError(null);
+    setSuccess(false);
     setPending(true);
     try {
       result = await ref.current(...args);
+      setSuccess(true);
     } catch (e: unknown) {
       if (e instanceof Error) {
         setError(e);
@@ -86,13 +99,13 @@ export const usePendingEvent = () => {
   }, []);
 
   return [
-    { pending, error },
+    { pending, success, error },
     <A extends any[], R>(callback: Fn<A, R>): Fn<A, R> => {
       ref.current = callback;
       return memoized as unknown as Fn<A, R>;
     },
   ] as const;
-};
+}
 
 /**
  * Effects that should run only once
@@ -117,14 +130,7 @@ export function useEffectOnce(effectCb: React.EffectCallback) {
  */
 export function useIsFirstRender(): boolean {
   const isFirst = useRef(true);
-
-  if (isFirst.current) {
-    isFirst.current = false;
-
-    return true;
-  }
-
-  return isFirst.current;
+  return isFirst.current ? !(isFirst.current = false) : false;
 }
 
 /**
@@ -147,7 +153,7 @@ export function useUpdateEffect(
 /**
  * Converts a react hook function into a render prop component
  */
- export function withHook<A extends any[], R>(useHook: Fn<A, R>) {
+export function withHook<A extends any[], R>(useHook: Fn<A, R>) {
   return function HookComponent({
     children,
     args,
@@ -259,11 +265,11 @@ export function useFocusElementOnVisible<T extends HTMLElement>() {
  * A simple abstraction to play with a counter
  */
 export function useCounter(initialValue?: number) {
-  const [count, setCount] = useState(initialValue || 0)
+  const [count, setCount] = useState(initialValue || 0);
 
-  const increment = () => setCount(x => x + 1)
-  const decrement = () => setCount(x => x - 1)
-  const reset = () => setCount(initialValue || 0)
+  const increment = () => setCount((x) => x + 1);
+  const decrement = () => setCount((x) => x - 1);
+  const reset = () => setCount(initialValue || 0);
 
   return {
     count,
@@ -271,6 +277,129 @@ export function useCounter(initialValue?: number) {
     decrement,
     reset,
     setCount,
-  }
+  };
 }
 
+/**
+ * Defer a suspense triggering function after a mount
+ */
+export function useSuspendAfterMount<ReturnType>(callback: AnyFn<ReturnType>) {
+  const [didMount, setDidMount] = useState(false);
+
+  useEffect(() => {
+    startTransition(() => {
+      setDidMount(true);
+    });
+  }, []);
+
+  return didMount ? callback() : undefined;
+}
+
+/**
+ * A wrapper to React's own useRef to support lazy initialization
+ */
+export function useLazyRef<T>(fn: () => T) {
+  const ref = useRef<T>();
+  if (!ref.current) ref.current = fn();
+  return ref;
+}
+
+export function useInterval<T extends () => void>(callback: T, delay: number) {
+  const savedCallback = useRef<T>(callback);
+
+  // Remember the latest callback.
+  useEffect(() => {
+    savedCallback.current = callback;
+  }, [callback]);
+
+  // Set up the interval.
+  useEffect(() => {
+    let id = setInterval(() => {
+      savedCallback.current();
+    }, delay);
+    return () => clearInterval(id);
+  }, [delay]);
+}
+
+export function useIntersectingEntry<E extends Element>(
+  options?: IntersectionObserverInit
+) {
+  let { root, rootMargin, threshold } = options ?? {};
+
+  let elementRef = useRef<E>(null);
+  let hold = useRef(false);
+
+  return [
+    useSyncExternalStore(
+      function subscribe(callback: () => void) {
+        let observer = new IntersectionObserver(
+          (entries: IntersectionObserverEntry[]) => {
+            callback();
+            hold.current = entries[0].isIntersecting;
+          },
+          {
+            root,
+            rootMargin,
+            threshold,
+          }
+        );
+
+        observer.observe(elementRef.current!);
+
+        return () => {
+          observer.disconnect();
+        };
+      },
+      function getSnapshot() {
+        return hold.current;
+      },
+      function getServerSnapshot() {
+        return hold.current;
+      }
+    ),
+    elementRef,
+  ];
+}
+
+// Reusable component that also takes dependencies
+export function useAnimationFrame(
+  cb: (arg: { time: number; delta: number }) => void,
+  deps: React.DependencyList | undefined
+) {
+  const frame = useRef<number>();
+  const last = useRef(performance.now());
+  const init = useRef(performance.now());
+
+  const animate = () => {
+    const now = performance.now();
+    const time = (now - init.current) / 1000;
+    const delta = (now - last.current) / 1000;
+    // In seconds ~> you can do ms or anything in userland
+    cb({ time, delta });
+    last.current = now;
+    frame.current = requestAnimationFrame(animate);
+  };
+
+  useEffect(() => {
+    frame.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frame.current!);
+  }, deps); // Make sure to change it if the deps change
+}
+
+export default function withSuspense<
+  P extends React.Attributes | null | undefined
+>(Component: React.ComponentType & any, Fallback?: React.ComponentType & any) {
+  return function WithSuspense(props: P) {
+    return createElement(
+      Suspense,
+      { fallback: Fallback ? createElement(Fallback, null) : null },
+      createElement(Component, props)
+    );
+  };
+}
+
+export const createEmitter = createNanoEvents;
+
+export function createEmitterContext<T extends EventsMap>() {
+  return createContext(createEmitter<T>());
+}

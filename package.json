@@ -1,8 +1,7 @@
 {
   "name": "@cyca/utils",
-  "version": "0.0.1",
+  "version": "0.0.7",
   "description": "Personal JS utils I use in the daily",
-  "type": "module",
   "sideEffects": false,
   "main": "index.js",
   "types": "index.d.ts",
@@ -40,23 +39,24 @@
   "author": "Cyrus Venn Casada <cvpcasada@outlook.com>",
   "license": "MIT",
   "devDependencies": {
-    "@types/node": "^18.11.11",
-    "@types/react": "^18.0.26",
+    "@types/node": "^20.4.8",
+    "@types/react": "^18.2.18",
+    "bun-types": "latest",
     "dequal": "^2.0.3",
-    "jotai": "^1.11.1",
+    "jotai": "^2.3.0",
     "json": "^11.0.0",
-    "npm-packlist": "^7.0.2",
+    "nanoevents": "^8.0.0",
     "react": "^18.2.0",
-    "remeda": "^1.3.0",
+    "remeda": "^1.24.0",
     "shx": "^0.3.4",
     "ts-toolbelt": "^9.6.0",
-    "tsup": "^6.5.0",
-    "typescript": "^4.9.3"
+    "tsup": "^7.2.0",
+    "typescript": "^5.2.2"
   },
   "peerDependencies": {
-    "jotai": "1.x",
+    "jotai": "2.x",
     "react": "16.8 - 18",
-    "remeda": "^1.3.0"
+    "remeda": "^1.16.0"
   },
   "peerDependenciesMeta": {
     "react": {
@@ -74,5 +74,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "volta": {
+    "node": "18.17.0"
   }
 }
