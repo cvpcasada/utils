@@ -1,11 +1,14 @@
+import { defineConfig } from "tsup";
 import type { Options } from "tsup";
 
 const env = process.env.NODE_ENV;
 
-export const tsup: Options = {
-  sourcemap: env === "prod", 
+export default defineConfig({
+  sourcemap: env === "prod",
   clean: true,
-  dts: true,
+  dts: {
+    resolve: true,
+  },
   splitting: false,
   format: ["cjs", "esm"],
   minify: env === "production",
@@ -18,4 +21,4 @@ export const tsup: Options = {
     remeda: "src/remeda/index.ts",
     jotai: "src/jotai/index.ts",
   },
-};
+});

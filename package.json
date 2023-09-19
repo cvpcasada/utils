@@ -1,6 +1,6 @@
 {
   "name": "@cyca/utils",
-  "version": "0.0.7",
+  "version": "0.0.9",
   "description": "Personal JS utils I use in the daily",
   "sideEffects": false,
   "main": "index.js",

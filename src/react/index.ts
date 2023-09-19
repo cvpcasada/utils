@@ -12,7 +12,7 @@ import {
 } from "react";
 
 import { dequal as equals } from "dequal/lite";
-import { Emitter, EventsMap, createNanoEvents } from "nanoevents";
+import { createNanoEvents } from "nanoevents";
 
 export { default as useMediaQuery } from "./useMediaQuery";
 
@@ -400,6 +400,8 @@ export default function withSuspense<
 
 export const createEmitter = createNanoEvents;
 
-export function createEmitterContext<T extends EventsMap>() {
-  return createContext(createEmitter<T>());
+export type { Emitter } from "nanoevents";
+
+export function createEmitterContext<T extends { [event: string]: unknown }>() {
+  return createContext(createNanoEvents<T>());
 }
