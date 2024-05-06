@@ -3,7 +3,6 @@
     "declaration": true,
     "emitDeclarationOnly": true,
     "esModuleInterop": true,
-    "types": ["bun-types", "./types/index.d.ts"],
     "module": "ESNext",
     "moduleResolution": "node",
     "noImplicitAny": false,

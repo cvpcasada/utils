@@ -1,5 +1,4 @@
-import { EventsMap, createNanoEvents } from "nanoevents";
-import { createContext } from "react";
+export * from "@epic-web/invariant";
 
 export function isValidHttpUrl(string: string) {
   try {
@@ -80,7 +79,7 @@ export function higlightWords<T, P>(
     caseSensitive?: boolean;
     mark?: MarkFn<T>;
     append?: AppendFn<T, P>;
-  }
+  },
 ) {
   let {
     caseSensitive = true,
@@ -91,7 +90,7 @@ export function higlightWords<T, P>(
   let ranges: number[] = [];
   let regex = new RegExp(
     escapeRegExp(searchTerm).replace(" ", "|"),
-    caseSensitive ? "g" : "gi"
+    caseSensitive ? "g" : "gi",
   );
 
   let match: RegExpExecArray | null;
@@ -118,7 +117,7 @@ function highlight(
   ranges: number[],
   mark: MarkFn<any | any> = defaultMark,
   accum: any = "",
-  append: AppendFn<any, any> = defaultAppend
+  append: AppendFn<any, any> = defaultAppend,
 ) {
   accum = append(accum, mark(str.substring(0, ranges[0]), false)) ?? accum;
 
@@ -132,7 +131,7 @@ function highlight(
       accum =
         append(
           accum,
-          mark(str.substring(ranges[i + 1], ranges[i + 2]), false)
+          mark(str.substring(ranges[i + 1], ranges[i + 2]), false),
         ) ?? accum;
   }
 
@@ -141,6 +140,24 @@ function highlight(
     accum;
 
   return accum;
+}
+
+export function debounce<F extends Function>(func: F, timeout: number) {
+  let timeoutId: number;
+
+  return ((...args: any[]) => {
+    clearTimeout(timeoutId);
+    timeoutId = window.setTimeout(() => func(...args), timeout);
+  }) as unknown as F;
+}
+
+export function debounceAnimationFrame<F extends Function>(func: F) {
+  let raf: number;
+
+  return function (...args: any[]) {
+    if (raf) cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(func.bind(func, ...args));
+  } as unknown as F;
 }
 
 export const noop = (): null => null;

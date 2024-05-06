@@ -8,12 +8,11 @@ import {
   useSyncExternalStore,
   createElement,
   Suspense,
-  createContext,
+  createContext
 } from "react";
 
 import { dequal as equals } from "dequal/lite";
-import { createNanoEvents } from "nanoevents";
-
+import mitt, { Handler } from "mitt";
 export { default as useMediaQuery } from "./useMediaQuery";
 
 type Fn<A extends any[], R> = (...args: A) => R;
@@ -24,21 +23,39 @@ type EventRef<T> = { callback: T; stable: T };
  * React hook for creating a value exactly once. useMemo doesn't give this guarantee unfortunately
  * see https://github.com/Andarist/use-constant
  */
-export function useConstant<T>(fn: () => T): T {
+export function useConstant<T>(input: T | (() => T)): T {
   const ref = useRef<{ v: T }>();
 
   if (!ref.current) {
-    ref.current = { v: fn() };
+    ref.current = {
+      v: typeof input === "function" ? (input as () => T)() : input,
+    };
   }
 
   return ref.current.v;
 }
 
 /**
- * see https://github.com/Andarist/use-isomorphic-layout-effect
+ * Returns the last stored value when given a new input value
  */
-export const useIsomorphicLayoutEffect =
-  typeof document !== "undefined" ? useLayoutEffect : useEffect;
+export function usePrevious<T>(value: T): T | null {
+  let [[current, previus], set] = useState<[T, T | null]>([value, null]);
+
+  if (value !== current) {
+    set([value, current]);
+  }
+
+  return previus;
+}
+
+/**
+ * Returns true if the value has changed since the last render
+ */
+export function useHasChanged<T>(value: T) {
+  let prev = usePrevious(value);
+  
+  return prev !== null && prev !== value;
+}
 
 /**
  * A Hook to define an event handler with an always-stable function identity. Aimed to be easier to use than useCallback.
@@ -51,7 +68,7 @@ export function useEvent<A extends any[], R>(callback: Fn<A, R>): Fn<A, R> {
     callback,
   });
 
-  useIsomorphicLayoutEffect(() => {
+  useLayoutEffect(() => {
     ref.current.callback = callback;
   });
 
@@ -72,7 +89,7 @@ export function useEvent<A extends any[], R>(callback: Fn<A, R>): Fn<A, R> {
  * a callback function as an argument and returns a memoized version of the callback.
  * The memoized version of the callback will be used to track the pending and error state.
  */
-export function usePendingEvent() {
+export function useAsyncCallback() {
   let [success, setSuccess] = useState(false);
   let [pending, setPending] = useState(false);
   let [error, setError] = useState<Error | null>(null);
@@ -197,6 +214,14 @@ export function useDeepMemoEffect(
     callback,
     useDeepMemo(() => deps, deps)
   );
+}
+
+/**
+ * Returns a function that can be used to force a re-render
+ */
+export function useForceUpdate() {
+  let [key, setKey] = useState<React.Key>(0);
+  return [key, () => setKey(k => Number(k) + 1)] as const;
 }
 
 /**
@@ -358,7 +383,7 @@ export function useIntersectingEntry<E extends Element>(
       }
     ),
     elementRef,
-  ];
+  ] as const;
 }
 
 // Reusable component that also takes dependencies
@@ -398,10 +423,59 @@ export default function withSuspense<
   };
 }
 
-export const createEmitter = createNanoEvents;
-
-export type { Emitter } from "nanoevents";
-
 export function createEmitterContext<T extends { [event: string]: unknown }>() {
-  return createContext(createNanoEvents<T>());
+  let $ = mitt<T>();
+
+  let on = (on: keyof T, listener: (...args: any[]) => void) => {
+    $.on(on, listener);
+    return () => $.off(on, listener);
+  };
+
+  let bind = (listeners: { [K in keyof T]: Handler<T[K]> }) => {
+    for (const [event, listener] of Object.entries(listeners)) {
+      $.on(event, listener);
+    }
+
+    return () => {
+      for (const [event, listener] of Object.entries(listeners)) {
+        $.off(event, listener);
+      }
+    };
+  };
+
+  return createContext({ on, bind, $ });
+}
+
+/**
+ *  Dynamically measure the size of a given HTML element and update CSS custom properties accordingly
+ */
+export function useStyleMeasure<T extends HTMLElement>(prefix: string = 'container') {
+  let ref = useRef<T>(null);
+
+  useLayoutEffect(() => {
+    if (!ref.current) return;
+
+    let htmlEl = ref.current;
+
+    let oberver = new ResizeObserver(
+      ([
+        {
+          contentRect: { width, height },
+        },
+      ]) => {
+        htmlEl.style.setProperty(`--${prefix}-width`, width.toString());
+        htmlEl.style.setProperty(`--${prefix}-height`, height.toString());
+      },
+    );
+
+    if (htmlEl) {
+      oberver.observe(htmlEl);
+    }
+
+    return () => {
+      oberver?.disconnect();
+    };
+  }, [prefix]);
+
+  return ref;
 }
