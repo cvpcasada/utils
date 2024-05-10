@@ -3,13 +3,13 @@
     "declaration": true,
     "emitDeclarationOnly": true,
     "esModuleInterop": true,
-    "module": "ESNext",
+    "module": "ES2022",
     "moduleResolution": "node",
     "noImplicitAny": false,
     "rootDir": "src",
     "skipLibCheck": true,
     "strict": true,
     "strictPropertyInitialization": false,
-    "target": "ESNext"
+    "target": "ES2022"
   }
 }

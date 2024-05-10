@@ -8,23 +8,25 @@ import {
   useSyncExternalStore,
   createElement,
   Suspense,
-  createContext
+  DependencyList,
+  EffectCallback,
 } from "react";
 
 import { dequal as equals } from "dequal/lite";
-import mitt, { Handler } from "mitt";
 export { default as useMediaQuery } from "./useMediaQuery";
 
 type Fn<A extends any[], R> = (...args: A) => R;
 type AnyFn<R> = Fn<any[], R>;
 type EventRef<T> = { callback: T; stable: T };
 
+const defaultIsEqual = (a: unknown, b: unknown) => a === b;
+
 /**
  * React hook for creating a value exactly once. useMemo doesn't give this guarantee unfortunately
  * see https://github.com/Andarist/use-constant
  */
 export function useConstant<T>(input: T | (() => T)): T {
-  const ref = useRef<{ v: T }>();
+  let ref = useRef<{ v: T }>();
 
   if (!ref.current) {
     ref.current = {
@@ -33,6 +35,49 @@ export function useConstant<T>(input: T | (() => T)): T {
   }
 
   return ref.current.v;
+}
+
+/**
+ * Runs an effect based on changes in dependencies while also accessing their previous values.
+ */
+export function usePreviousEffect<Args extends DependencyList>(
+  effect: (args: Args) => void | (() => void),
+  inputs: Args
+) {
+  let previousInputsRef = useRef<Args>(inputs);
+
+  useEffect(() => {
+    let result = effect(previousInputsRef.current);
+    previousInputsRef.current = inputs;
+
+    return result;
+  }, inputs);
+}
+
+/**
+ * Runs an effect when a provided dependency has changed
+ * replaces useUpdateEffect
+ */
+export function useHasChangedEffect(
+  effect: EffectCallback,
+  deps: DependencyList,
+  equal = defaultIsEqual
+) {
+  usePreviousEffect((previousDeps) => {
+    let hasChanged = false;
+
+    if (previousDeps.length !== deps.length) {
+      console.warn("number of dependencies has changed");
+      hasChanged = true;
+    } else {
+      for (let i = 0; i < deps.length; i++) {
+        hasChanged = hasChanged || !equal(previousDeps[i], deps[i]);
+        if (hasChanged) break;
+      }
+    }
+
+    if (hasChanged) return effect();
+  }, deps);
 }
 
 /**
@@ -53,7 +98,7 @@ export function usePrevious<T>(value: T): T | null {
  */
 export function useHasChanged<T>(value: T) {
   let prev = usePrevious(value);
-  
+
   return prev !== null && prev !== value;
 }
 
@@ -125,11 +170,13 @@ export function useAsyncCallback() {
 }
 
 /**
+ * @deprecated do not use with React 19
+ *
  * Effects that should run only once
  * https://github.com/reactwg/react-18/discussions/18#discussion-3385714
  */
 export function useEffectOnce(effectCb: React.EffectCallback) {
-  const calledOnce = useRef(false);
+  let calledOnce = useRef(false);
 
   useEffect(() => {
     if (calledOnce.current === false) {
@@ -142,22 +189,15 @@ export function useEffectOnce(effectCb: React.EffectCallback) {
 }
 
 /**
- * Simple React hook that return a boolean;
- * @returns True at the mount time, Then always false
- */
-export function useIsFirstRender(): boolean {
-  const isFirst = useRef(true);
-  return isFirst.current ? !(isFirst.current = false) : false;
-}
-
-/**
+ * @deprecated do not use with React 19
+ *
  * A modified version of useEffect that is skipping the first render.
  */
 export function useUpdateEffect(
   effect: React.EffectCallback,
   deps?: React.DependencyList
 ) {
-  const isFirst = useIsFirstRender();
+  let isFirst = useIsFirstRender();
 
   useEffect(() => {
     if (!isFirst) {
@@ -168,19 +208,14 @@ export function useUpdateEffect(
 }
 
 /**
- * Converts a react hook function into a render prop component
+ * @deprecated do not use with React 19
+ *
+ * Simple React hook that return a boolean
+ * @returns True at the mount time, Then always false
  */
-export function withHook<A extends any[], R>(useHook: Fn<A, R>) {
-  return function HookComponent({
-    children,
-    args,
-  }: {
-    children: (props: ReturnType<typeof useHook>) => React.ReactElement;
-    args?: A;
-  }) {
-    const res = useHook(...((args ?? []) as A));
-    return children(res);
-  };
+export function useIsFirstRender(): boolean {
+  let isFirst = useRef(true);
+  return isFirst.current ? !(isFirst.current = false) : false;
 }
 
 /**
@@ -194,7 +229,7 @@ export function useDeepMemo<TKey, TValue>(
   memoFn: () => TValue,
   key: TKey
 ): TValue {
-  const ref = useRef<{ key: TKey; value: TValue }>();
+  let ref = useRef<{ key: TKey; value: TValue }>();
 
   if (!ref.current || !equals(key, ref.current.key)) {
     ref.current = { key, value: memoFn() };
@@ -221,7 +256,7 @@ export function useDeepMemoEffect(
  */
 export function useForceUpdate() {
   let [key, setKey] = useState<React.Key>(0);
-  return [key, () => setKey(k => Number(k) + 1)] as const;
+  return [key, () => setKey((k) => Number(k) + 1)] as const;
 }
 
 /**
@@ -290,11 +325,11 @@ export function useFocusElementOnVisible<T extends HTMLElement>() {
  * A simple abstraction to play with a counter
  */
 export function useCounter(initialValue?: number) {
-  const [count, setCount] = useState(initialValue || 0);
+  let [count, setCount] = useState(initialValue || 0);
 
-  const increment = () => setCount((x) => x + 1);
-  const decrement = () => setCount((x) => x - 1);
-  const reset = () => setCount(initialValue || 0);
+  let increment = () => setCount((x) => x + 1);
+  let decrement = () => setCount((x) => x - 1);
+  let reset = () => setCount(initialValue || 0);
 
   return {
     count,
@@ -309,7 +344,7 @@ export function useCounter(initialValue?: number) {
  * Defer a suspense triggering function after a mount
  */
 export function useSuspendAfterMount<ReturnType>(callback: AnyFn<ReturnType>) {
-  const [didMount, setDidMount] = useState(false);
+  let [didMount, setDidMount] = useState(false);
 
   useEffect(() => {
     startTransition(() => {
@@ -324,13 +359,13 @@ export function useSuspendAfterMount<ReturnType>(callback: AnyFn<ReturnType>) {
  * A wrapper to React's own useRef to support lazy initialization
  */
 export function useLazyRef<T>(fn: () => T) {
-  const ref = useRef<T>();
+  let ref = useRef<T>();
   if (!ref.current) ref.current = fn();
   return ref;
 }
 
 export function useInterval<T extends () => void>(callback: T, delay: number) {
-  const savedCallback = useRef<T>(callback);
+  let savedCallback = useRef<T>(callback);
 
   // Remember the latest callback.
   useEffect(() => {
@@ -391,14 +426,14 @@ export function useAnimationFrame(
   cb: (arg: { time: number; delta: number }) => void,
   deps: React.DependencyList | undefined
 ) {
-  const frame = useRef<number>();
-  const last = useRef(performance.now());
-  const init = useRef(performance.now());
+  let frame = useRef<number>();
+  let last = useRef(performance.now());
+  let init = useRef(performance.now());
 
-  const animate = () => {
-    const now = performance.now();
-    const time = (now - init.current) / 1000;
-    const delta = (now - last.current) / 1000;
+  let animate = () => {
+    let now = performance.now();
+    let time = (now - init.current) / 1000;
+    let delta = (now - last.current) / 1000;
     // In seconds ~> you can do ms or anything in userland
     cb({ time, delta });
     last.current = now;
@@ -411,45 +446,12 @@ export function useAnimationFrame(
   }, deps); // Make sure to change it if the deps change
 }
 
-export default function withSuspense<
-  P extends React.Attributes | null | undefined
->(Component: React.ComponentType & any, Fallback?: React.ComponentType & any) {
-  return function WithSuspense(props: P) {
-    return createElement(
-      Suspense,
-      { fallback: Fallback ? createElement(Fallback, null) : null },
-      createElement(Component, props)
-    );
-  };
-}
-
-export function createEmitterContext<T extends { [event: string]: unknown }>() {
-  let $ = mitt<T>();
-
-  let on = (on: keyof T, listener: (...args: any[]) => void) => {
-    $.on(on, listener);
-    return () => $.off(on, listener);
-  };
-
-  let bind = (listeners: { [K in keyof T]: Handler<T[K]> }) => {
-    for (const [event, listener] of Object.entries(listeners)) {
-      $.on(event, listener);
-    }
-
-    return () => {
-      for (const [event, listener] of Object.entries(listeners)) {
-        $.off(event, listener);
-      }
-    };
-  };
-
-  return createContext({ on, bind, $ });
-}
-
 /**
  *  Dynamically measure the size of a given HTML element and update CSS custom properties accordingly
  */
-export function useStyleMeasure<T extends HTMLElement>(prefix: string = 'container') {
+export function useStyleMeasure<T extends HTMLElement>(
+  prefix: string = "container"
+) {
   let ref = useRef<T>(null);
 
   useLayoutEffect(() => {
@@ -465,7 +467,7 @@ export function useStyleMeasure<T extends HTMLElement>(prefix: string = 'contain
       ]) => {
         htmlEl.style.setProperty(`--${prefix}-width`, width.toString());
         htmlEl.style.setProperty(`--${prefix}-height`, height.toString());
-      },
+      }
     );
 
     if (htmlEl) {
@@ -478,4 +480,32 @@ export function useStyleMeasure<T extends HTMLElement>(prefix: string = 'contain
   }, [prefix]);
 
   return ref;
+}
+
+/**
+ * Converts a react hook function into a render prop component
+ */
+export function withHook<A extends any[], R>(useHook: Fn<A, R>) {
+  return function HookComponent({
+    children,
+    args,
+  }: {
+    children: (props: ReturnType<typeof useHook>) => React.ReactElement;
+    args?: A;
+  }) {
+    let res = useHook(...((args ?? []) as A));
+    return children(res);
+  };
+}
+
+export default function withSuspense<
+  P extends React.Attributes | null | undefined
+>(Component: React.ComponentType & any, Fallback?: React.ComponentType & any) {
+  return function WithSuspense(props: P) {
+    return createElement(
+      Suspense,
+      { fallback: Fallback ? createElement(Fallback, null) : null },
+      createElement(Component, props)
+    );
+  };
 }

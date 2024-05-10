@@ -61,5 +61,3 @@ function hasTsIndex(dirPath: string) {
 
   return fs.existsSync(indexTSPath) || fs.existsSync(indexTSXPath);
 }
-
-console.log(listEntryFiles("src"));

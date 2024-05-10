@@ -1,6 +1,6 @@
 {
   "name": "@cyca/utils",
-  "version": "0.0.10",
+  "version": "0.0.12-next.4",
   "description": "Personal JS utils I use in the daily",
   "sideEffects": false,
   "type": "module",
@@ -14,25 +14,19 @@
       "import": "./*.js"
     }
   },
-  "files": [
-    "**"
-  ],
+  "files": ["**"],
   "scripts": {
     "type-check": "tsc",
-    "build:dev": "tsup --watch",
-    "build:prod": "bun run rm -rf dist && env NODE_ENV=production tsup && bun postbuild",
+    "build": "bun run rm -rf dist && env NODE_ENV=production tsup",
     "build:watch": "tsup --watch",
-    "postbuild": "bun run cp package.json readme.md LICENSE dist && json -I -f dist/package.json -e \"this.devDependencies=undefined; this.optionalDependencies=undefined; this.scripts=undefined;\""
+    "postbuild": "bun run cp package.json readme.md LICENSE dist && json -I -f dist/package.json -e \"this.devDependencies=undefined; this.optionalDependencies=undefined; this.scripts=undefined;\"",
+    "publish": "cd dist && npm publish --access public"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/cvpcasada/js-utils.git"
   },
-  "keywords": [
-    "react",
-    "ramda",
-    "jotai"
-  ],
+  "keywords": ["react", "ramda", "jotai"],
   "author": "Cyrus Venn Casada <cvpcasada@outlook.com>",
   "license": "MIT",
   "dependencies": {
