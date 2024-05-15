@@ -1,7 +1,6 @@
-
 import { purry } from "remeda";
-import { Narrow } from "remeda/dist/types/_narrow";
-import { Path } from "remeda/dist/types/_paths";
+import { type Narrow } from "remeda/dist/types/_narrow.js";
+import { type Path } from "remeda/dist/types/_paths.js";
 
 type Tail<T extends any[]> = ((...t: T) => void) extends (
   h: any,
@@ -39,7 +38,7 @@ function _deepOmit<T>(value: T, target: PropertyKey[]) {
     }
     return collect;
   } else if (typeof value === "object" && value !== null) {
-    let collect: { [key: symbol]: unknown } = {};
+    let collect: { [key: string]: unknown } = {};
     for (let [key, entryValue] of Object.entries(value)) {
       collect[key] = _deepOmit(entryValue as T, target);
     }

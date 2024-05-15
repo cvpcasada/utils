@@ -1,6 +1,6 @@
 {
   "name": "@cyca/utils",
-  "version": "0.0.12-next.4",
+  "version": "0.0.12",
   "description": "Personal JS utils I use in the daily",
   "sideEffects": false,
   "type": "module",
@@ -43,7 +43,7 @@
     "react": "^18.3.1",
     "remeda": "^1.61.0",
     "tsup": "^v8.0.2",
-    "typescript": "^5.2.2"
+    "typescript": "^5.4.5"
   },
   "peerDependencies": {
     "jotai": "2.x",
@@ -62,12 +62,9 @@
     }
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=18"
   },
   "publishConfig": {
     "access": "public"
-  },
-  "volta": {
-    "node": "18.17.0"
   }
 }

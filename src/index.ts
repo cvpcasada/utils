@@ -122,7 +122,7 @@ function highlight(
   accum = append(accum, mark(str.substring(0, ranges[0]), false)) ?? accum;
 
   for (let i = 0; i < ranges.length; i += 2) {
-    let fr = ranges[i];
+    let fr = ranges[i]!;
     let to = ranges[i + 1];
 
     accum = append(accum, mark(str.substring(fr, to), true)) ?? accum;
@@ -131,12 +131,12 @@ function highlight(
       accum =
         append(
           accum,
-          mark(str.substring(ranges[i + 1], ranges[i + 2]), false),
+          mark(str.substring(ranges[i + 1]!, ranges[i + 2]), false),
         ) ?? accum;
   }
 
   accum =
-    append(accum, mark(str.substring(ranges[ranges.length - 1]), false)) ??
+    append(accum, mark(str.substring(ranges[ranges.length - 1]!), false)) ??
     accum;
 
   return accum;

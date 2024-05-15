@@ -1,4 +1,4 @@
-import mitt, { Emitter, EventType, Handler } from "mitt";
+import mitt, { type Emitter, type EventType, type Handler } from "mitt";
 
 export function bind<
   Events extends Record<EventType, unknown>,

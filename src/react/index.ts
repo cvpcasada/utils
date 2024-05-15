@@ -8,16 +8,15 @@ import {
   useSyncExternalStore,
   createElement,
   Suspense,
-  DependencyList,
-  EffectCallback,
+  type EffectCallback,
+  type DependencyList,
 } from "react";
 
 import { dequal as equals } from "dequal/lite";
-export { default as useMediaQuery } from "./useMediaQuery";
+export { default as useMediaQuery } from "./useMediaQuery.js";
 
 type Fn<A extends any[], R> = (...args: A) => R;
 type AnyFn<R> = Fn<any[], R>;
-type EventRef<T> = { callback: T; stable: T };
 
 const defaultIsEqual = (a: unknown, b: unknown) => a === b;
 
@@ -108,8 +107,8 @@ export function useHasChanged<T>(value: T) {
  * See https://react.dev/learn/separating-events-from-effects#declaring-an-effect-event
  */
 export function useEvent<A extends any[], R>(callback: Fn<A, R>): Fn<A, R> {
-  let ref = useRef<EventRef<Fn<A, R>>>({
-    stable: (...args) => ref.current.callback(...args),
+  let ref = useRef({
+    stable: (...args: A) => ref.current.callback(...args),
     callback,
   });
 
@@ -298,7 +297,7 @@ export function useIntersectionCallback<E extends Element>(
 export function useIsIntersecting(options?: IntersectionObserverInit) {
   let [isIntersecting, setIsIntersecting] = useState<boolean>(false);
   let elementRef = useIntersectionCallback(
-    ([entry]) => setIsIntersecting(entry.isIntersecting),
+    ([entry]) => setIsIntersecting(entry?.isIntersecting ?? false),
     options
   );
 
@@ -312,7 +311,7 @@ export function useIsIntersecting(options?: IntersectionObserverInit) {
 export function useFocusElementOnVisible<T extends HTMLElement>() {
   return useIntersectionCallback<T>(
     ([entry], observer) => {
-      if (entry.isIntersecting) {
+      if (entry?.isIntersecting) {
         (entry.target as T).focus({ preventScroll: true });
         observer.disconnect();
       }
@@ -393,9 +392,10 @@ export function useIntersectingEntry<E extends Element>(
     useSyncExternalStore(
       function subscribe(callback: () => void) {
         let observer = new IntersectionObserver(
-          (entries: IntersectionObserverEntry[]) => {
+          ([entry]: IntersectionObserverEntry[]) => {
+            if (!entry) return;
             callback();
-            hold.current = entries[0].isIntersecting;
+            hold.current = entry.isIntersecting;
           },
           {
             root,
@@ -459,16 +459,15 @@ export function useStyleMeasure<T extends HTMLElement>(
 
     let htmlEl = ref.current;
 
-    let oberver = new ResizeObserver(
-      ([
-        {
-          contentRect: { width, height },
-        },
-      ]) => {
-        htmlEl.style.setProperty(`--${prefix}-width`, width.toString());
-        htmlEl.style.setProperty(`--${prefix}-height`, height.toString());
-      }
-    );
+    let oberver = new ResizeObserver(([entry]) => {
+      if (!entry) return;
+      let {
+        contentRect: { width, height },
+      } = entry;
+
+      htmlEl.style.setProperty(`--${prefix}-width`, width.toString());
+      htmlEl.style.setProperty(`--${prefix}-height`, height.toString());
+    });
 
     if (htmlEl) {
       oberver.observe(htmlEl);
@@ -498,7 +497,7 @@ export function withHook<A extends any[], R>(useHook: Fn<A, R>) {
   };
 }
 
-export default function withSuspense<
+export function withSuspense<
   P extends React.Attributes | null | undefined
 >(Component: React.ComponentType & any, Fallback?: React.ComponentType & any) {
   return function WithSuspense(props: P) {

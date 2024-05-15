@@ -1,15 +1,25 @@
 {
   "compilerOptions": {
-    "declaration": true,
-    "emitDeclarationOnly": true,
+    /* base options */
     "esModuleInterop": true,
-    "module": "ES2022",
-    "moduleResolution": "node",
-    "noImplicitAny": false,
-    "rootDir": "src",
     "skipLibCheck": true,
+    "target": "ES2022",
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "moduleDetection": "force",
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    /* stritness */
     "strict": true,
-    "strictPropertyInitialization": false,
-    "target": "ES2022"
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    /* transpile options */
+    "module": "NodeNext",
+    "outDir": "dist",
+    "sourceMap": true,
+    "declaration": true,
+    /* DOM types */
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    
   }
 }
